@@ -36,10 +36,7 @@ def write_new(new: str) -> None:
     pkgbuild_path = Path('PKGBUILD')
 
     if pkgbuild_path.is_file():
-        message(
-            'warning: PKGBUILD exists. Saving as PKGBUILD.orig...',
-            file=sys.stderr,
-        )
+        message('warning: PKGBUILD exists. Saving as PKGBUILD.orig...')
 
         orig_path = Path('PKGBUILD.orig')
 
