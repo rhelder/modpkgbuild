@@ -18,7 +18,8 @@ def cook_spec(spec: str) -> dict:
     """Turns a string into a validated spec."""
     d = yaml.load(spec, Loader=SafeLoader)
 
-    return validate_spec(d)
+    validate_spec(d)
+    return d
 
 
 class TestLiteralReplacements(unittest.TestCase):

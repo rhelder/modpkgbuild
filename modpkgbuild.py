@@ -143,7 +143,10 @@ def read_old(repo: str) -> str:
 
 
 def parse_spec() -> dict:
-    return validate_spec(load_spec())
+    spec = load_spec()
+
+    validate_spec(spec)
+    return spec
 
 
 def load_spec() -> dict:
@@ -154,7 +157,7 @@ def load_spec() -> dict:
     return spec
 
 
-def validate_spec(spec: dict) -> dict:
+def validate_spec(spec: dict):
     if not isinstance(spec, dict):
         raise SpecError('expected a YAML mapping')
 
@@ -188,8 +191,6 @@ def validate_spec(spec: dict) -> dict:
                 )
             )
             raise
-
-    return spec
 
 
 def parse_args():

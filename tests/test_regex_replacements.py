@@ -18,7 +18,8 @@ from modpkgbuild import SpecError
 def cook_spec(spec: str) -> dict:
     d = yaml.load(spec, Loader=SafeLoader)
 
-    return validate_spec(d)
+    validate_spec(d)
+    return d
 
 
 class TestRegexReplacements(unittest.TestCase):
