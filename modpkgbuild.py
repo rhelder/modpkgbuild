@@ -33,19 +33,24 @@ class SpecError(Exception):
 
 def write_new(new: str) -> None:
     """Writes the new PKGBUILD to `./PKGBUILD`."""
-    pkgbuild_path = Path('PKGBUILD')
+    tmpdir = tempfile.TemporaryDirectory(dir='.')
+    pkgbuild_path = Path(tmpdir.name) / 'PKGBUILD'
 
-    if pkgbuild_path.is_file():
+    pkgbuild_path.write_text(new)
+
+    target_path = Path('PKGBUILD')
+
+    if target_path.is_file():
         message('warning: PKGBUILD exists. Saving as PKGBUILD.orig...')
 
         orig_path = Path('PKGBUILD.orig')
 
         if orig_path.is_file():
-            raise FileExistsError('PKGBUILD.orig also exists')
+            raise FileExistsError('PKGBUILD.orig also exists. Aborting.')
         else:
-            pkgbuild_path.rename(orig_path)
+            target_path.rename(orig_path)
 
-    pkgbuild_path.write_text(new)
+    pkgbuild_path.rename(target_path)
 
 
 def gen_new(old: str, spec: dict) -> str:
