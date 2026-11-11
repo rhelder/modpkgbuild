@@ -55,7 +55,7 @@ def write_new(new: str) -> None:
 
 def gen_new(old: str, spec: dict) -> str:
     """Applies the changes specified in `modpkgbuild.yml`."""
-    new = ''
+    new = []
     pos = 0
 
     for r in spec['replacements']:
@@ -124,7 +124,7 @@ def gen_new(old: str, spec: dict) -> str:
 
     # Append any remaining text in the old PKGBUILD to the new PKGBUILD
     new += old[pos:]
-    return new
+    return ''.join(new)
 
 
 def read_old(repo: str) -> str:
