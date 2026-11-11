@@ -61,5 +61,6 @@ it in the replacement text.
 
 ## Project Status
 
-This project is still in the planning phase and is not ready even for
-experimental use.
+This package should be considered to be alpha software. Until `modpkgbuild`
+has been more extensively tested, the user should manually review generated
+PKGBUILDs before building or deploying packages.
