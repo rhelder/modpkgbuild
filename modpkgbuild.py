@@ -23,21 +23,28 @@ except ImportError:
     from yaml import SafeLoader
 
 
+class ReplacementError(Exception):
+    """An error in applying a replacement."""
+
+
+class SpecError(Exception):
+    """An error in modpkgbuild.yml."""
+
+
 def write_new(new: str) -> None:
     """Writes the new PKGBUILD to `./PKGBUILD`."""
     pkgbuild_path = Path('PKGBUILD')
 
     if pkgbuild_path.is_file():
-        print(
-            'Warning: PKGBUILD exists. Saving as PKGBUILD.orig...',
+        message(
+            'warning: PKGBUILD exists. Saving as PKGBUILD.orig...',
             file=sys.stderr,
         )
 
         orig_path = Path('PKGBUILD.orig')
 
         if orig_path.is_file():
-            print('PKGBUILD.orig also exists. Aborting...', file=sys.stderr)
-            sys.exit(1)
+            raise FileExistsError('PKGBUILD.orig also exists')
         else:
             pkgbuild_path.rename(orig_path)
 
@@ -62,12 +69,10 @@ def gen_new(old: str, spec: dict) -> str:
             try:
                 pos += old[prev_pos:].index(r['old'])
             except ValueError:
-                print(
-                    f"substring '{r['old']}'",
-                    f'in replacement {r["description"]} not found',
-                    file=sys.stderr,
+                raise ReplacementError(
+                    f"substring '{r['old']}' "
+                    f"in replacement '{r['description']}' not found"
                 )
-                sys.exit(1)
 
             # The text between the end of the last match and the start of the
             # next match are the same in the old PKGBUILD and in the new
@@ -84,12 +89,9 @@ def gen_new(old: str, spec: dict) -> str:
             try:
                 pattern = re.compile(r['old'])
             except re.PatternError as e:
-                print(
-                    f'Invalid regex in replacement {r["description"]}:',
-                    e,
-                    file=sys.stderr,
+                raise SpecError(
+                    f"invalid regex in replacement '{r['description']}': {e}"
                 )
-                sys.exit(2)
 
             # Search for the next match in the old PKGBUILD, starting at the
             # end of the last match, so that the changes specified in
@@ -98,13 +100,10 @@ def gen_new(old: str, spec: dict) -> str:
 
             # It is an error if a match cannot be found
             if not match:
-                print(
-                    f"pattern '{pattern.pattern}'",
-                    f'in replacement {r["description"]} not matched',
-                    file=sys.stderr,
+                raise ReplacementError(
+                    f"pattern '{pattern.pattern}' "
+                    f"in replacement '{r['description']}' not matched"
                 )
-                print(new)
-                sys.exit(1)
 
             # Advance the position tracker to the position of the beginning of
             # the next match
@@ -130,15 +129,12 @@ def read_old(repo: str) -> str:
     """Clones the upstream git repo and reads its PKGBUILD."""
     tmpdir = tempfile.TemporaryDirectory()
 
-    try:
-        subprocess.run(
-            ['git', 'clone', repo, tmpdir.name],
-            check=True,
-            capture_output=True,
-        )
-    except subprocess.CalledProcessError as e:
-        print(e.stderr, file=sys.stderr)
-        sys.exit(e.returncode)
+    subprocess.run(
+        ['git', 'clone', repo, tmpdir.name],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
 
     with open(Path(tmpdir.name) / 'PKGBUILD') as f:
         return f.read()
@@ -150,78 +146,46 @@ def parse_spec() -> dict:
 
 def load_spec() -> dict:
     """Loads modpkgbuild.yml."""
-    try:
-        with open('./modpkgbuild.yml') as f:
-            spec = yaml.load(f.read(), Loader=SafeLoader)
-    except OSError as e:
-        print('Failed to read modpkgbuild.yml:', e.strerror, file=sys.stderr)
-        sys.exit(2)
-    except yaml.YAMLError as e:
-        print('Failed to parse modpkgbuild.yml:', e, file=sys.stderr)
-        sys.exit(2)
+    with open('./modpkgbuild.yml') as f:
+        spec = yaml.load(f.read(), Loader=SafeLoader)
 
     return spec
 
 
 def validate_spec(spec: dict) -> dict:
     if not isinstance(spec, dict):
-        print(
-            'Invalid modpkgbuild.yml: expected a YAML mapping', file=sys.stderr
-        )
-        sys.exit(2)
+        raise SpecError('expected a YAML mapping')
 
     try:
         if not isinstance(spec['repo'], str):
-            print(
-                "Invalid modpkgbuild.yml: 'repo' must be a string",
-                file=sys.stderr,
-            )
-            sys.exit(2)
+            raise SpecError("'repo' must be a string")
         elif not isinstance(spec['replacements'], list):
-            print(
-                "Invalid modpkgbuild.yml: 'replacements' must be a list",
-                file=sys.stderr,
-            )
-            sys.exit(2)
+            raise SpecError("'replacements' must be a list")
     except KeyError as e:
-        print(
-            f'Invalid modpkgbuild.yml: missing required field {e}',
-            file=sys.stderr,
-        )
-        sys.exit(2)
+        raise SpecError(f'missing required field {e}')
 
     for i, r in enumerate(spec['replacements']):
         try:
             if not isinstance(r['description'], str):
-                print(
-                    'Invalid modpkgbuild.yml:',
-                    f"'description' in replacement {i} must be a string",
-                    file=sys.stderr,
+                raise SpecError(
+                    f"'description' in replacement {i + 1} must be a string"
                 )
-                sys.exit(2)
             elif not isinstance(r['old'], str):
-                print(
-                    'Invalid modpkgbuild.yml:',
-                    f"'old' in replacement '{r['description']}'",
-                    'must be a string',
-                    file=sys.stderr,
+                raise SpecError(
+                    f"'old' in replacement '{r['description']}' must be a string"
                 )
-                sys.exit(2)
             elif not isinstance(r['new'], str):
-                print(
-                    'Invalid modpkgbuild.yml:',
-                    f"'new' in replacement '{r['description']}'",
-                    'must be a string',
-                    file=sys.stderr,
+                raise SpecError(
+                    f"'new' in replacement '{r['description']}' must be a string"
                 )
-                sys.exit(2)
         except KeyError as e:
-            print(
-                f'Invalid modpkgbuild.yml: missing required field {e}',
-                f"in replacement '{r.get('description', i)}'",
-                file=sys.stderr,
+            raise SpecError(
+                'missing required field {} in replacement {}'.format(
+                    e,
+                    f"'{r['description']}'" if r.get('description') else i + 1,
+                )
             )
-            sys.exit(2)
+            raise
 
     return spec
 
@@ -241,18 +205,41 @@ Prints a diff to stderr on success.
     return parser.parse_args()
 
 
+def message(*args: str, **kwargs):
+    print('modpkgbuild.py:', *args, **kwargs, file=sys.stderr)
+
+
 def main():
     parse_args()
 
-    spec = parse_spec()
-    old = read_old(spec['repo'])
-    new = gen_new(old, spec)
+    try:
+        spec = parse_spec()
+        old = read_old(spec['repo'])
+        new = gen_new(old, spec)
+        write_new(new)
+    except OSError as e:
+        message(
+            f' {e.filename}:' if e.filename else ' ',
+            e.strerror or str(e),
+            sep='',
+        )
+        return 1
+    except yaml.YAMLError as e:
+        message('failed to parse modpkgbuild.yml:', str(e))
+        return 2
+    except SpecError as e:
+        message('invalid modpkgbuild.yml:', str(e))
+        return 2
+    except subprocess.CalledProcessError as e:
+        message(e.stderr)
+        return e.returncode
+    except ReplacementError as e:
+        message(str(e))
+        return 1
 
-    write_new(new)
-    print(
-        'New PKGBUILD successfully written to ./PKGBUILD,',
+    message(
+        'new PKGBUILD successfully written to ./PKGBUILD,',
         'with the following changes from the old PKGBUILD:',
-        file=sys.stderr,
     )
     sys.stderr.writelines(
         difflib.unified_diff(
