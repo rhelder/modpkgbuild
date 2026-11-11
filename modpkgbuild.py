@@ -242,5 +242,7 @@ def main():
         difflib.unified_diff(
             old.splitlines(keepends=True),
             new.splitlines(keepends=True),
+            fromfile=f'{spec["repo"]}:PKGBUILD',
+            tofile='PKGBUILD',
         )
     )
