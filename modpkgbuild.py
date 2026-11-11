@@ -31,8 +31,13 @@ class SpecError(Exception):
     """An error in modpkgbuild.yml."""
 
 
-def write_new(new: str) -> None:
-    """Writes the new PKGBUILD to `./PKGBUILD`."""
+def write_new(new: str):
+    """Writes the new PKGBUILD to `./PKGBUILD`.
+
+    Args:
+        new (string):
+            The content of the new PKGBUILD.
+    """
     tmpdir = tempfile.TemporaryDirectory(dir='.')
     pkgbuild_path = Path(tmpdir.name) / 'PKGBUILD'
 
@@ -54,7 +59,17 @@ def write_new(new: str) -> None:
 
 
 def gen_new(old: str, spec: dict) -> str:
-    """Applies the changes specified in `modpkgbuild.yml`."""
+    """Applies the changes specified in `modpkgbuild.yml`.
+
+    Args:
+        old (string):
+            The content of the upstream PKGBUILD.
+        spec (dictionary):
+            The data loaded from modpkgbuild.yml.
+
+    Returns:
+        (string) The content of the new PKGBUILD.
+    """
     new = []
     pos = 0
 
@@ -128,7 +143,15 @@ def gen_new(old: str, spec: dict) -> str:
 
 
 def read_old(repo: str) -> str:
-    """Clones the upstream git repo and reads its PKGBUILD."""
+    """Clones the upstream git repo and reads its PKGBUILD.
+
+    Args:
+        repo (string):
+            The URL to the upstream git repository.
+
+    Returns:
+        (string) The content of the upstream PKGBUILD.
+    """
     tmpdir = tempfile.TemporaryDirectory()
 
     subprocess.run(
@@ -143,6 +166,11 @@ def read_old(repo: str) -> str:
 
 
 def parse_spec() -> dict:
+    """Loads and validates modpkgbuild.yml.
+
+    Returns:
+        (dictionary) The data loaded from modpkgbuild.yml.
+    """
     spec = load_spec()
 
     validate_spec(spec)
@@ -150,7 +178,11 @@ def parse_spec() -> dict:
 
 
 def load_spec() -> dict:
-    """Loads modpkgbuild.yml."""
+    """Loads modpkgbuild.yml.
+
+    Returns:
+        (dictionary) The data loaded from modpkgbuild.yml.
+    """
     with open('./modpkgbuild.yml') as f:
         spec = yaml.load(f.read(), Loader=SafeLoader)
 
@@ -158,6 +190,12 @@ def load_spec() -> dict:
 
 
 def validate_spec(spec: dict):
+    """Validates the data loaded from modpkgbuild.yml.
+
+    Args:
+        spec (dictionary):
+            The data loaded from modpkgbuild.yml.
+    """
     if not isinstance(spec, dict):
         raise SpecError('expected a YAML mapping')
 
@@ -209,6 +247,7 @@ Prints a diff to stderr on success.
 
 
 def message(*args: str, **kwargs):
+    """Prints messages to stderr."""
     print('modpkgbuild.py:', *args, **kwargs, file=sys.stderr)
 
 
